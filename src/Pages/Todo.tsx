@@ -17,6 +17,7 @@ export default function Todo() {
     const getToken = () => {
         if (!localStorage.getItem("user")) {
             setLocation("/login");
+            return;
         }
         return JSON.parse(localStorage.getItem("user")!).access;
     }
