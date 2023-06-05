@@ -1,6 +1,5 @@
-import {useEffect,useState,useRef,InputHTMLAttributes, FormEventHandler, ChangeEventHandler, MouseEventHandler} from 'react';
+import {useEffect,useState,useRef,InputHTMLAttributes, FormEventHandler} from 'react';
 import {useLocation} from "wouter";
-import {v4 as uuid,} from "uuid";
 
 type Todo = {
     id:string,
