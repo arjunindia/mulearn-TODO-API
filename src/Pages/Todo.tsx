@@ -1,65 +1,161 @@
-import {useEffect,useState,useRef,InputHTMLAttributes} from 'react';
-import {useLocation,Link} from "wouter";
+import {useEffect,useState,useRef,InputHTMLAttributes, FormEventHandler, ChangeEventHandler, MouseEventHandler} from 'react';
+import {useLocation} from "wouter";
 import {v4 as uuid,} from "uuid";
+
+type Todo = {
+    id:string,
+    text:string,
+    completed:boolean
+}
 export default function Todo() {
-    const todoVar = localStorage.getItem("todos") ? JSON.parse(localStorage.getItem("todos")!) : [];
+    const todoVar = localStorage.getItem("todosapi") ? JSON.parse(localStorage.getItem("todosapi")!) : [];
     const [_, setLocation] = useLocation();
     const [todos, setTodos] = useState<{id:string,text:string,completed:boolean}[]>(todoVar);
     const [visibleTodos, setVisibleTodos] = useState<{id:string,text:string,completed:boolean}[]>(todoVar);
     const [filter, setFilter] = useState<"all"|"active"|"completed">("all");
     const checkRef = useRef<HTMLInputElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    function fetchTodos(){
+        console.log(JSON.parse(localStorage.getItem("user")!));
+        fetch(
+            "https://mulearn-internship-task-production.up.railway.app/api/todo/",
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${JSON.parse(localStorage.getItem("user")!).access}`,
+                },
+            }
+        )
+            .then((res) => res.json())
+            .then((data) => handleResponse(data))
+            .catch((err) => console.log(err));
+    };
+    function handleResponse(data: {id?:number,title?:string,isComplteted?:boolean}[]&{detail?:string}){
+        console.log(data);
+        if(data.detail){
+            console.log(data.detail);
+            setLocation("/login");
+            return;
+        }
+        if(data.length){
+            const todos = data.map((todo) => {
+                return {
+                    id:`${todo.id}`,
+                    text:todo.title!,
+                    completed:todo.isComplteted!
+                }
+            })
+
+            setTodos(todos);
+        }
+    }
+    const setItem = (todos: Todo[]) => {
+        localStorage.setItem("todos", JSON.stringify(todos));
+    }
     useEffect(() => {
         if (!localStorage.getItem("user")) {
             setLocation("/login");
         }
-
+        fetchTodos();
     }, []);
     useEffect(() => {
         if (filter === "all") {
             setVisibleTodos(todos);
         } else if (filter === "active") {
-            setVisibleTodos(todos.filter((todo: any) => !todo.completed));
+            setVisibleTodos(todos.filter((todo) => !todo.completed));
         } else if (filter === "completed") {
-            setVisibleTodos(todos.filter((todo: any) => todo.completed));
+            setVisibleTodos(todos.filter((todo) => todo.completed));
         }
     }, [filter, todos]);
 
+    useEffect(() => {
+        setItem(todos);
+    }, [todos]);
 
-    const setItem = (todos: any) => {
-        localStorage.setItem("todos", JSON.stringify(todos));
+
+    const newTodo = (text: string) => {
+        fetch("https://mulearn-internship-task-production.up.railway.app/api/todo/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${JSON.parse(localStorage.getItem("user")!).access}`,
+            },
+            body: JSON.stringify({
+                title: text,
+            })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.detail) {
+                    console.log(data.detail);
+                    setLocation("/login");
+                    return;
+                }
+
+                const todo = {
+                    id: `${data.id}`,
+                    text: data.title,
+                    completed: data.isComplteted
+                }
+                setTodos([...todos, todo]);
+            })
+
+    }
+    const updateTodo = (id: string) => {
+        fetch(`https://mulearn-internship-task-production.up.railway.app/api/todo/${id}/`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${JSON.parse(localStorage.getItem("user")!).access}`,
+            },
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.detail) {
+                    console.log(data.detail);
+                    setLocation("/login");
+                    return;
+                }
+                const newTodos = todos.map((todo) => {
+                    if (todo.id === id) {
+                        todo.completed = !todo.completed;
+                    }
+                    return todo;
+                });
+                setTodos(newTodos);
+            })
+    }
+    const deleteTodo = (id: string) => {
+        fetch(`https://mulearn-internship-task-production.up.railway.app/api/todo/${id}/`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${JSON.parse(localStorage.getItem("user")!).access}`,
+            },
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.detail) {
+                    console.log(data.detail);
+                    setLocation("/login");
+                    return;
+                }
+
+                const newTodos = todos.filter((todo) => todo.id !== id);
+                setTodos(newTodos);
+            })
     }
 
-    const handleSubmit = (e: any) => {
+    const handleSubmit:FormEventHandler<HTMLFormElement> = (e) => {
         e.preventDefault();
-        const todo = {
-            id: uuid(),
-            text: inputRef.current!.value,
-            completed: checkRef.current!.checked
+        if (inputRef.current?.value) {
+            newTodo(
+                inputRef.current.value
+            );
+            inputRef.current.value = "";
         }
-        setItem([...todos, todo]);
-        setTodos([...todos, todo]);
-        inputRef.current!.value = "";
-        checkRef.current!.checked = false;
     }
-    const checkboxChange = (e: any) => {
-        const id = e.target.parentElement.parentElement.getAttribute("data-id");
-        const newTodos = todos.map((todo: any) => {
-            if (todo.id === id) {
-                todo.completed = !todo.completed;
-            }
-            return todo;
-        });
-        setItem(newTodos);
-        setTodos(newTodos);
-    }
-    const deleteTodo = (e: any) => {
-        const id = e.target.parentElement.getAttribute("data-id");
-        const newTodos = todos.filter((todo: any) => todo.id !== id);
-        setItem(newTodos);
-        setTodos(newTodos);
-    }
-
     return (
         <><div className="header">
 
@@ -76,11 +172,15 @@ export default function Todo() {
         <button type="submit" className="todo__submit">Add</button>
         </form>
         <div className="todo__list">
-        {visibleTodos.map((todo: any) => (
+        {visibleTodos.map((todo) => (
             <div className="todo__item" key={todo.id} data-id={todo.id}>
-            <Checkbox defaultChecked={todo.completed} onChange={checkboxChange} />
+            <Checkbox defaultChecked={todo.completed} onChange={()=>{
+                updateTodo(`${todo.id}`);
+            }} />
             <p className={`todo__text ${todo.completed && 'todo__strike'}`}>{todo.text}</p>
-            <button className="todo__delete" onClick={deleteTodo}>X</button>
+            <button className="todo__delete" onClick={()=>{
+                deleteTodo(`${todo.id}`)
+            }}>X</button>
             </div>
         ))}
         <div className='todo__actions'>
@@ -90,7 +190,12 @@ export default function Todo() {
                 <button className={`todo__filter ${filter === "active" && "todo__filter--active"}`} onClick={() => setFilter("active")}>Active</button>
                 <button className={`todo__filter ${filter === "completed" && "todo__filter--active"}`} onClick={() => setFilter("completed")}>Completed</button>
             </div>
-            <button className="todo__clear" onClick={() => setTodos(todos.filter((todo: any) => !todo.completed))}>Clear Completed</button>
+            <button className="todo__clear" onClick={()=>{
+                const newTodos = todos.filter((todo) => todo.completed);
+                newTodos.forEach((todo) => {
+                    deleteTodo(`${todo.id}`);
+                })
+            }}>Clear Completed</button>
         </div>
         </div>
         </>
