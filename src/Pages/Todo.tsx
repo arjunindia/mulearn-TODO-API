@@ -14,15 +14,20 @@ export default function Todo() {
     const [filter, setFilter] = useState<"all"|"active"|"completed">("all");
     const checkRef = useRef<HTMLInputElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const getToken = () => {
+        if (!localStorage.getItem("user")) {
+            setLocation("/login");
+        }
+        return JSON.parse(localStorage.getItem("user")!).access;
+    }
     function fetchTodos(){
-        console.log(JSON.parse(localStorage.getItem("user")!));
         fetch(
             "https://mulearn-internship-task-production.up.railway.app/api/todo/",
             {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${JSON.parse(localStorage.getItem("user")!).access}`,
+                    "Authorization": `Bearer ${getToken()}`,
                 },
             }
         )
@@ -78,7 +83,7 @@ export default function Todo() {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${JSON.parse(localStorage.getItem("user")!).access}`,
+                "Authorization": `Bearer ${getToken()}`,
             },
             body: JSON.stringify({
                 title: text,
@@ -130,7 +135,7 @@ export default function Todo() {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${JSON.parse(localStorage.getItem("user")!).access}`,
+                "Authorization": `Bearer ${getToken()}`,
             },
         })
             .then((res) => res.json())
