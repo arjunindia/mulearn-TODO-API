@@ -36,7 +36,7 @@ export default function Todo() {
             .then((data) => handleResponse(data))
             .catch((err) => console.log(err));
     };
-    function handleResponse(data: {id?:number,title?:string,isComplteted?:boolean}[]&{detail?:string}){
+    function handleResponse(data: {id?:number,title?:string,isCompleted?:boolean}[]&{detail?:string}){
         console.log(data);
         if(data.detail){
             console.log(data.detail);
@@ -48,7 +48,7 @@ export default function Todo() {
                 return {
                     id:`${todo.id}`,
                     text:todo.title!,
-                    completed:todo.isComplteted!
+                    completed:todo.isCompleted!
                 }
             })
 
@@ -83,12 +83,12 @@ export default function Todo() {
         fetch("https://mulearn-internship-task-production.up.railway.app/api/todo/", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": `Bearer ${getToken()}`,
             },
-            body: JSON.stringify({
+            body: new URLSearchParams({
                 title: text,
-            })
+            }).toString(),
         })
             .then((res) => res.json())
             .then((data) => {
@@ -111,8 +111,8 @@ export default function Todo() {
         fetch(`https://mulearn-internship-task-production.up.railway.app/api/todo/${id}/`, {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${JSON.parse(localStorage.getItem("user")!).access}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": `Bearer ${getToken()}`,
             },
         })
             .then((res) => res.json())
@@ -135,7 +135,7 @@ export default function Todo() {
         fetch(`https://mulearn-internship-task-production.up.railway.app/api/todo/${id}/`, {
             method: "DELETE",
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": `Bearer ${getToken()}`,
             },
         })
@@ -179,7 +179,8 @@ export default function Todo() {
         <div className="todo__list">
         {visibleTodos.map((todo) => (
             <div className="todo__item" key={todo.id} data-id={todo.id}>
-            <Checkbox defaultChecked={todo.completed} onChange={()=>{
+            <Checkbox defaultChecked={todo.completed}
+            onChange={()=>{
                 updateTodo(`${todo.id}`);
             }} />
             <p className={`todo__text ${todo.completed && 'todo__strike'}`}>{todo.text}</p>
